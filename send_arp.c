@@ -1,7 +1,7 @@
 #include "send_arp.h"
 
 /* Ref: https://stackoverflow.com/questions/1779715/how-to-get-mac-address-of-your-machine-using-a-c-program */
-int GetLocalMac(struct ether_addr* LocalMac, char* dev){
+int GetLocalMac(char* dev, struct ether_addr* LocalMac){
     struct ifreq s;
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 
@@ -14,7 +14,7 @@ int GetLocalMac(struct ether_addr* LocalMac, char* dev){
 }
 
 /* Ref: https://stackoverflow.com/questions/2283494/get-ip-address-of-an-interface-on-linux */
-int GetLocalIP(struct in_addr* LocalIP, char* dev){
+int GetLocalIP(char* dev, struct in_addr* LocalIP){
     int fd;
     struct ifreq ifr;
     fd = socket(AF_INET, SOCK_DGRAM, 0);
