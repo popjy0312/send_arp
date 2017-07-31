@@ -36,7 +36,7 @@ int main(int argc, char** argv){
         return 2;
     }
     /* Get Local IP addr */
-    if(GetLocalIP(&LocalIP, dev) != 1){
+    if(GetLocalIP(dev, &LocalIP) != 1){
         fprintf(stderr, "Couldn't get IPv4\n");
         return 2;
     }
@@ -47,7 +47,7 @@ int main(int argc, char** argv){
     printf("Get Local Mac Address...\n");
 
     /* Get Local Mac Address */
-    if(GetLocalMac(&LocalMac, dev) != 1){
+    if(GetLocalMac(dev, &LocalMac) != 1){
         fprintf(stderr, "Couldn't Get local Mac Address\n");
         return 2;
     }
