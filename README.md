@@ -1,13 +1,19 @@
 # Send Arp
+BOB6기 취약점 분석 트랙 정주영
+
+이경문멘토님 과제 2.
+
 
 ## 리포트
 sender(victim)의 arp table을 변조하라.
 
 ## 프로그램
-```
+```sh
 send_arp <interface> <sender ip> <target ip>
 ```
+```sh
 ex : send_arp wlan0 192.168.10.2 192.168.10.1
+```
 
 sender ip는 victim ip라고도 함.
 
