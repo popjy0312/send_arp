@@ -21,9 +21,27 @@ struct __attribute__((packed)) arp_addr{
     struct in_addr TargetIP;
 };
 
-int GetLocalIP(struct in_addr* LocalIP, char* dev);
-int GetLocalMac(struct ether_addr* LocalMac, char* dev);
-int GetSenderMac(pcap_t *handle, struct ether_addr LocalMac, struct in_addr LocalIP, struct in_addr SenderIP, struct ether_addr* SMac);
-int GenArpPacket(struct ether_addr DMac, struct ether_addr SMac, uint16_t OpCode, struct in_addr SenderIP,struct ether_addr SenderMac, struct in_addr TargetIP, struct ether_addr TargetMac, char** packet, uint32_t* size);
-int AttackPacket(pcap_t* handle, struct ether_addr SenderMac, struct ether_addr LocalMac, struct in_addr TargetIP, struct in_addr SenderIP);
 
+/* input dev */
+/* output LocalIP Address */
+int GetLocalIP(char* dev, struct in_addr* LocalIP);
+
+
+/* input dev */
+/* output LocalMac Address */
+int GetLocalMac(char* dev, struct ether_addr* LocalMac);
+
+
+/* input handle, LacalMac, LocalIP, SenderIP */
+/* output SMac(Sender Mac address) */
+/* send normal ARP request packet and recieve ARP reply packet */
+int GetSenderMac(pcap_t *handle, struct ether_addr LocalMac, struct in_addr LocalIP, struct in_addr SenderIP, struct ether_addr* SMac);
+
+
+/* input DMac, SMac, OpCode, SenderIP, SenderMac, TargetIP, TargetMac */
+/* output packet, size */
+int GenArpPacket(struct ether_addr DMac, struct ether_addr SMac, uint16_t OpCode, struct in_addr SenderIP, struct ether_addr SenderMac, struct in_addr TargetIP, struct ether_addr TargetMac, char** packet, uint32_t* size);
+
+
+/* input handle, SenderMac, LocalMac, TargetIP, SenderIP */
+int AttackPacket(pcap_t* handle, struct ether_addr SenderMac, struct ether_addr LocalMac, struct in_addr TargetIP, struct in_addr SenderIP);
