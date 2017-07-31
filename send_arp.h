@@ -21,9 +21,9 @@ struct __attribute__((packed)) arp_addr{
     struct in_addr TargetIP;
 };
 
-int GetMyIP(struct in_addr* MyIP, char* dev);
-int GetMyMac(struct ether_addr* MyMac, char* dev);
-int GetSenderMac(pcap_t *handle, struct ether_addr MyMac, struct in_addr MyIP, struct in_addr SenderIP, struct ether_addr* SMac);
+int GetLocalIP(struct in_addr* LocalIP, char* dev);
+int GetLocalMac(struct ether_addr* LocalMac, char* dev);
+int GetSenderMac(pcap_t *handle, struct ether_addr LocalMac, struct in_addr LocalIP, struct in_addr SenderIP, struct ether_addr* SMac);
 int GenArpPacket(struct ether_addr DMac, struct ether_addr SMac, uint16_t OpCode, struct in_addr SenderIP,struct ether_addr SenderMac, struct in_addr TargetIP, struct ether_addr TargetMac, char** packet, uint32_t* size);
-int AttackPacket(pcap_t* handle, struct ether_addr SenderMac, struct ether_addr MyMac, struct in_addr TargetIP, struct in_addr SenderIP);
+int AttackPacket(pcap_t* handle, struct ether_addr SenderMac, struct ether_addr LocalMac, struct in_addr TargetIP, struct in_addr SenderIP);
 

