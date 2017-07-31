@@ -11,9 +11,10 @@
 #include <sys/ioctl.h>
 #include <linux/if.h>
 #include <netdb.h>
+#include <stdlib.h>
 
 int GetMyMac(struct ether_addr* MyMac, char* dev);
-int GetSenderMac(struct ether_addr* SMac);
+int GetSenderMac(struct ether_addr MyMac, struct in_addr MyIP, struct in_addr SenderIP, struct ether_addr* SMac);
 int GenArpPacket(struct ether_addr DMac, struct ether_addr SMac, char OpCode, struct in_addr SenderIP,struct ether_addr SenderMac, struct in_addr TargetIP, struct ether_addr TargetMac, char** packet, int* size);
 int SpoofPacket(pcap_t* handle, struct ether_addr SenderMac, struct ether_addr MyMac, struct in_addr TargetIP, struct in_addr SenderIP);
 
@@ -21,9 +22,11 @@ int main(int argc, char** argv){
     pcap_t *handle;   /* Session handle */
     char *dev;  /* device to communication */
     char errbuf[PCAP_ERRBUF_SIZE];  /* Error string */
+    bpf_u_int32 net;
+    bpf_u_int32 mask;
     struct ether_addr MyMac;   /* my mac address */
     struct ether_addr SenderMac;
-    struct in_addr SenderIP, TargetIP;
+    struct in_addr MyIP, SenderIP, TargetIP;
     /* Check argument count */
     if(argc != 4){
         printf("usage : %s <interface> <sender ip> <target ip>\n",argv[0]);
@@ -39,18 +42,36 @@ int main(int argc, char** argv){
     }
     /* Define device */
     dev = argv[1];
+
+    printf("**********************************\n");
+    printf("Spoofing Program Start!!\n");
+    printf("Interface is %s\n",dev);
+    printf("Sender IP is %s\n",inet_ntoa(SenderIP));
+    printf("Target IP is %s\n",inet_ntoa(TargetIP));
+
     /* Open session in promiscuous mode */
     if( (handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf)) == NULL){
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
         return 2;
     }
+    if( pcap_lookupnet(dev, &net, &mask, errbuf) == -1){
+        fprintf(stderr, "Couldn't get netmask for device %s: %s\n",dev, errbuf);
+        return 2;
+    }
+    memcpy(&MyIP, &net, IPVERSION);
+    printf("My IP is %s\n",inet_ntoa(MyIP));
+    printf("**********************************\n");
     printf("Get Local Mac Address...\n");
     if(GetMyMac(&MyMac, dev) != 1){
         fprintf(stderr, "Couldn't Get local Mac Address\n");
         return 2;
     }
+    printf("Success!!\n");
     printf("Local Mac Address is %s\n",ether_ntoa(&MyMac));
-    GetSenderMac(&SenderMac);
+
+    printf("**********************************\n");
+    printf("Get Sender Mac Address...\n");
+    GetSenderMac(MyMac, MyIP, SenderIP,&SenderMac);
     //SpoofPacket(handle,SenderMac,MyMac,TargetIP,SenderIP);
     return 0;
 }
@@ -68,36 +89,57 @@ int GetMyMac(struct ether_addr* MyMac, char* dev){
     return 0;
 }
 
-int GetSenderMac(struct ether_addr* SMac){
-    char *packet;
+int GetSenderMac(struct ether_addr MyMac, struct in_addr MyIP, struct in_addr SenderIP, struct ether_addr* SMac){
+    struct ether_addr BroadcastMac;
+    struct ether_addr UnknownMac;
+    char *packet = (char *)malloc(ETHER_MAX_LEN);
     int size;
     /* broadcast request packet */
-    //GenArpPacket(BroadcastMac, MyMac, ARPOP_REQUEST, MyIP, SenderIP, &packet, &size);
+    //printf("Generate Request packet to ask who is %s\n",inet_ntoa(SenderIP));
+
+    memcpy(&BroadcastMac, "\xFF\xFF\xFF\xFF\xFF\xFF",ETHER_ADDR_LEN);
+    memcpy(&UnknownMac, "\x00\x00\x00\x00\x00\x00",ETHER_ADDR_LEN);
+    GenArpPacket(BroadcastMac, MyMac, ARPOP_REQUEST, MyIP, MyMac, SenderIP, UnknownMac, &packet, &size);
     /* parsing sniffed packet */
+
+    free(packet);
     return 1;
 }
 
 
 
 int GenArpPacket(struct ether_addr DMac, struct ether_addr SMac, char OpCode, struct in_addr SenderIP,struct ether_addr SenderMac, struct in_addr TargetIP, struct ether_addr TargetMac, char** packet, int* size){
-    struct ether_arp eth_arp;
+    struct ether_header eth_hdr;
+    struct arphdr arp_hdr;
+    uint32_t offset = 0;
 
-    eth_arp.arp_hrd = htons(ARPHRD_ETHER);
-    eth_arp.arp_pro = htons(ETHERTYPE_IP);
-    eth_arp.arp_hln = 6;
-    eth_arp.arp_pln = 4;
-    eth_arp.arp_op = OpCode;
-    memcpy(eth_arp.arp_sha, &SenderMac, ETH_ALEN);
-    memcpy(eth_arp.arp_spa, &SenderIP, 4);
-    memcpy(eth_arp.arp_tha, &TargetMac, ETH_ALEN);
-    memcpy(eth_arp.arp_tpa, &TargetIP, 4);
+    memcpy(eth_hdr.ether_dhost, &DMac, ETH_ALEN);
+    memcpy(eth_hdr.ether_shost, &SMac, ETH_ALEN);
+    eth_hdr.ether_type = htons(ETHERTYPE_ARP);
 
-    *size = sizeof(struct ether_arp);
-    memcpy(*packet, &eth_arp, sizeof(struct ether_arp));
+    arp_hdr.ar_hrd = htons(ARPHRD_ETHER);
+    arp_hdr.ar_pro = htons(ETHERTYPE_IP);
+    arp_hdr.ar_hln = ETHER_ADDR_LEN;
+    arp_hdr.ar_pln = IPVERSION;     /* is same with IP ADDR LEN */
+    arp_hdr.ar_op = OpCode;
+
+    *size = sizeof(struct ether_header) + sizeof(struct arphdr) + 2 * ETHER_ADDR_LEN + 2*IPVERSION;
+    memcpy(*packet + offset, &eth_hdr, sizeof(struct ether_header));
+    offset += sizeof(struct ether_header);
+    memcpy(*packet + offset, &arp_hdr, sizeof(struct arphdr));
+    offset += sizeof(struct arphdr);
+    memcpy(*packet + offset, &SenderIP, IPVERSION);
+    offset += IPVERSION;
+    memcpy(*packet + offset, &SenderMac, ETHER_ADDR_LEN);
+    offset += ETHER_ADDR_LEN;
+    memcpy(*packet + offset, &TargetIP, IPVERSION);
+    offset += IPVERSION;
+    memcpy(*packet + offset, &TargetMac, ETHER_ADDR_LEN);
     /* for debug */
+    printf("size : %d\n",*size);
     int i;
     for(i=0;i<*size;i++){
-        printf("%02x ",(*packet)[i]);
+        printf("%02x ",((char*)(*packet))[i]);
     }
     return 1;
 }
