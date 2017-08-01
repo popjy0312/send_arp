@@ -57,8 +57,12 @@ int GetSenderMac(pcap_t* handle, struct ether_addr LocalMac, struct in_addr Loca
     /* parsing sniffed packet */
     while((res = pcap_next_ex(handle, &pheader, &packet)) >= 0){
         /* time out */
-        if(res == 0)
+        if(res == 0){
+            if(pcap_sendpacket(handle, (const u_char *)Genpacket, size)){   // probably packet lost
+                return 0;
+            }
             continue;
+        }
         peth_hdr = (struct ether_header*) packet;
 
         if(peth_hdr->ether_type == htons(ETHERTYPE_ARP) &&
