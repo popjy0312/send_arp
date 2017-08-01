@@ -26,7 +26,7 @@ int GetLocalIP(char* dev, struct in_addr* LocalIP){
     close(fd);
 
     /* display result */
-    memcpy(LocalIP, &((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr, IPVERSION);
+    memcpy(LocalIP, &((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr, IP_ADDRLEN);
 
     return 1;
 }
@@ -73,13 +73,13 @@ int GetSenderMac(pcap_t* handle, struct ether_addr LocalMac, struct in_addr Loca
             if(parp_hdr->ar_hrd == htons(ARPHRD_ETHER) &&
                     parp_hdr->ar_pro == htons(ETHERTYPE_IP) &&
                     parp_hdr->ar_hln == ETHER_ADDR_LEN &&
-                    parp_hdr->ar_pln == IPVERSION &&
+                    parp_hdr->ar_pln == IP_ADDRLEN &&
                     parp_hdr->ar_op == htons(ARPOP_REPLY)){
 
                 parp_addr = (struct arp_addr*)(packet + sizeof(struct ether_header) + sizeof(struct arphdr));
-                if(!memcmp(&parp_addr->SenderIP, &SenderIP, IPVERSION) &&
+                if(!memcmp(&parp_addr->SenderIP, &SenderIP, IP_ADDRLEN) &&
                         !memcmp(&parp_addr->TargetMac, &LocalMac, ETHER_ADDR_LEN) &&
-                        !memcmp(&parp_addr->TargetIP, &LocalIP,IPVERSION)){
+                        !memcmp(&parp_addr->TargetIP, &LocalIP,IP_ADDRLEN)){
                     memcpy(SMac, &parp_addr->SenderMac, ETHER_ADDR_LEN);
                     break;
                 }
@@ -103,13 +103,13 @@ int GenArpPacket(struct ether_addr DMac, struct ether_addr SMac, uint16_t OpCode
     arp_hdr.ar_hrd = htons(ARPHRD_ETHER);
     arp_hdr.ar_pro = htons(ETHERTYPE_IP);
     arp_hdr.ar_hln = ETHER_ADDR_LEN;
-    arp_hdr.ar_pln = IPVERSION;     /* is same with IP ADDR LEN */
+    arp_hdr.ar_pln = IP_ADDRLEN;     /* is same with IP ADDR LEN */
     arp_hdr.ar_op = htons(OpCode);
 
     memcpy(&arp_addr.SenderMac, &SenderMac, ETHER_ADDR_LEN);
-    memcpy(&arp_addr.SenderIP, &SenderIP, IPVERSION);
+    memcpy(&arp_addr.SenderIP, &SenderIP, IP_ADDRLEN);
     memcpy(&arp_addr.TargetMac, &TargetMac, ETHER_ADDR_LEN);
-    memcpy(&arp_addr.TargetIP, &TargetIP, IPVERSION);
+    memcpy(&arp_addr.TargetIP, &TargetIP, IP_ADDRLEN);
 
     *size = sizeof(struct ether_header) + sizeof(struct arphdr) + sizeof(struct arp_addr);
 
