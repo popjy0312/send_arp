@@ -14,6 +14,9 @@
 #include <netdb.h>
 #include <stdlib.h>
 
+#define IP_ADDRLEN 4
+
+
 struct __attribute__((packed)) arp_addr{
     struct ether_addr SenderMac;
     struct in_addr SenderIP;
